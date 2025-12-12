@@ -1,0 +1,784 @@
+{
+  "name": "FashionPlus Brand Crawling",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Loop through input items\nfor (const item of $input.all()) {\n\n  const id = item.json.Id;\n  const name = item.json.Name;\n\n  // 브랜드 URL 생성\n  item.json.BrandURL = `https://www.fashionplus.co.kr/goods/brand-shop/${id}`;\n\n    // 필요 없는 필드 삭제\n  delete item.json.Id;\n  delete item.json.ItemCount;\n}\n\n// 모든 아이템 반환\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        112
+      ],
+      "id": "45048ef0-5cd8-4ca8-8365-a5da00c49b4a",
+      "name": "Make Brand-Shop URL"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "47f8d2df-4280-4a9f-96aa-7a56ef3f850f",
+              "leftValue": "={{ $json.Phone }}",
+              "rightValue": "\"\"",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "dbdcf8d5-a4ca-4114-ab86-b038e4084394",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "37af99dd-4975-49bc-8ce4-ccc077d62fc4",
+              "leftValue": "={{ $json.Manager }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        128
+      ],
+      "id": "26c1c91f-47f6-4201-9786-7b4d6c38667d",
+      "name": "Check not empty brand"
+    },
+    {
+      "parameters": {
+        "jsCode": "const initials = [\n  'ㄱ','ㄴ','ㄷ','ㄹ','ㅁ',\n  'ㅂ','ㅅ','ㅇ','ㅈ','ㅊ',\n  'ㅋ','ㅌ','ㅍ','ㅎ'\n];\n\nreturn initials.map(i => ({\n  json: {\n    firstLetter: i,\n    url: `https://www.fashionplus.co.kr/goods/group-mall/woman/brands/fetch?firstLetter=${encodeURIComponent(i)}`\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        128
+      ],
+      "id": "d8e74253-f4db-44c5-a4ed-14502f05c0ab",
+      "name": "Make category url"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -288,
+        144
+      ],
+      "id": "c0e250b9-b6fa-48b6-bbaf-dd5bd959aac1",
+      "name": "Get brand info"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8a22cf4a-ee36-4855-a9d9-5103509bff3c",
+              "name": "Name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "10f36b32-0129-4034-b632-d0c15d2d77ad",
+              "name": "Id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9bd5bfec-0a03-4807-bf1b-66ea750c866e",
+              "name": "ItemCount",
+              "value": "={{ $json.goodsCountInContext }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        144
+      ],
+      "id": "43796d99-013c-4861-bbe8-718db571ce48",
+      "name": "Set brand info"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "09602dea-87b8-4d40-9cf6-81f4cef8d5c8",
+              "leftValue": "={{ $json.ItemCount }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        144
+      ],
+      "id": "01fa7402-ae87-4162-93ef-741c6b710a84",
+      "name": "Check item count"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo",
+          "mode": "list",
+          "cachedResultName": "인플루언서",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1712811090,
+          "mode": "list",
+          "cachedResultName": "패션플러스",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo/edit#gid=1712811090"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        128
+      ],
+      "id": "2a09a6d6-f866-4ef2-88de-831435a9f094",
+      "name": "Get Fashionplus row",
+      "executeOnce": true,
+      "credentials": {
+        "googleApi": {
+          "id": "ZkmqvP27tbnM6X5e",
+          "name": "Google Sheets Soonicorn API_3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ed5412a-d7c6-4f47-a834-5ee70c7aaab8",
+              "name": "BrandName",
+              "value": "={{ $json[\"브랜드명\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "91f4fda8-44a5-4fbb-8394-e91b94e00fda",
+              "name": "BusinessName",
+              "value": "={{ $json[\"상호명\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "37e424ca-86a1-4b40-9d05-11cefefc95b3",
+              "name": "Phone",
+              "value": "={{ $json[\"연락처\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "3c1aca30-9fb1-4254-b771-d1fbedc48c32",
+              "name": "Email",
+              "value": "={{ $json[\"이메일\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "0ad33a73-dfa6-46b2-b98f-ad5b3226dfb3",
+              "name": "Manager",
+              "value": "={{ $json[\"담장자\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        128
+      ],
+      "id": "94ef692a-996e-45fd-8dfb-9e868d5e3494",
+      "name": "Set Fashionplus row data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) brands 배열 가져오기\nlet brandsRaw = $('Check item count').all();\nlet brands;\n\n// brandsRaw[0].json 이 배열인지 아닌지 체크\nif (Array.isArray(brandsRaw[0].json)) {\n  brands = brandsRaw[0].json;\n} else {\n  brands = brandsRaw.map(i => i.json);\n}\n\n// 2) businessList 배열 가져오기\nlet businessRaw = $('Check not empty brand').all();\nlet businessList;\n\n// businessRaw[0].json 이 배열인지 아닌지 체크\nif (Array.isArray(businessRaw[0].json)) {\n  businessList = businessRaw[0].json;\n} else {\n  businessList = businessRaw.map(i => i.json);\n}\n\n// BrandName 정규화\nconst businessBrandNames = new Set(\n  businessList.map(b => (b.BrandName || \"\").replace(/,$/, \"\").trim())\n);\n\n// 브랜드 중복 제거\nconst filtered = brands.filter(b => !businessBrandNames.has(b.Name));\n\n// 반환\nreturn filtered.map(b => ({ json: b }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        112
+      ],
+      "id": "ed46516d-298f-4845-a715-13ea02f67bd7",
+      "name": "Make unique brand"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.BrandURL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1520,
+        224
+      ],
+      "id": "1295cd3d-cbcb-415f-804c-637078167319",
+      "name": "Get brandpage"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 모든 input 아이템 가져오기\nconst inputItems = $input.all();\n\nconst results = [];\n\nfor (const current of inputItems) {\n\n  const item = current.json;\n\n  // HTML 문자열 추출\n  const html =\n    typeof item === 'string' ? item :\n    item.body ? item.body :\n    item.data ? item.data :\n    null;\n\n  if (!html || typeof html !== 'string') {\n    results.push({\n      json: { error: 'HTML 문자열을 찾을 수 없음', received: item }\n    });\n    continue;\n  }\n\n  // STEP 1: \"브랜드 Best\" 위치 찾기\n  const marker = \"브랜드 Best\";\n  const index = html.indexOf(marker);\n\n  if (index === -1) {\n    results.push({\n      json: { error: '\"브랜드 Best\" 문구를 찾을 수 없음' }\n    });\n    continue;\n  }\n\n  // \"브랜드 Best\" 이후만 자르기\n  const slicedHtml = html.slice(index);\n\n  // STEP 2: 첫 상품 링크 추출\n  const match = slicedHtml.match(/\\/goods\\/detail\\/(\\d+)/);\n\n  if (!match) {\n    results.push({\n      json: { error: '브랜드 Best 이후에서 상품 링크를 찾지 못함' }\n    });\n    continue;\n  }\n\n  const goodsId = match[1];\n\n  // 정상 결과 추가\n  results.push({\n    json: {\n      goodsId,\n      link: `https://www.fashionplus.co.kr/goods/detail/${goodsId}`\n    }\n  });\n}\n\n// 모든 아이템 반환\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        224
+      ],
+      "id": "cce4df60-f89e-4ee5-a524-a662b31f9801",
+      "name": "Make product url"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1936,
+        224
+      ],
+      "id": "09bcd73c-4c0b-4c7b-b1c4-3c3a073149cb",
+      "name": "Get product page"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nconst inputItems = $input.all();\n\nfor (const current of inputItems) {\n  // HTML 문자열 확보 (body → data → json 순서로 체크)\n  const html = String(\n    current.json.data ||\n    current.json.body ||\n    current.json ||\n    \"\"\n  );\n\n  // 1) \"판매자 정보\" 이후 첫 번째 <table> 블록 찾기\n  const sellerBlockMatch = html.match(/판매자 정보[\\s\\S]*?<table>([\\s\\S]*?)<\\/table>/);\n\n  if (!sellerBlockMatch) {\n    results.push({\n      json: {\n        error: \"판매자 정보 테이블을 찾을 수 없음\",\n        raw: current.json\n      }\n    });\n    continue;\n  }\n\n  const sellerTable = sellerBlockMatch[1];\n\n  // 2) 업체명 추출\n  const companyMatch = sellerTable.match(/업체명[\\s\\S]*?<td>(.*?)<\\/td>/);\n  const businessname = companyMatch ? companyMatch[1].trim() : null;\n\n  // 3) 연락처 추출\n  const phoneMatch = sellerTable.match(/연락처[\\s\\S]*?<td>(.*?)<\\/td>/);\n  const phone = phoneMatch ? phoneMatch[1].trim() : null;\n\n  // 아이템 결과 push\n  results.push({\n    json: {\n      businessname,\n      phone  \n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        224
+      ],
+      "id": "303deba9-46a4-4b1e-85bf-31e93c1d3e35",
+      "name": "Get businessname & phone"
+    },
+    {
+      "parameters": {
+        "url": "http://apis.data.go.kr/1130000/MllBs_2Service/getMllBsCoNmInfo_2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "serviceKey",
+              "value": "03dfc7611d47b13df4dadf410f18d6ae012e250ed48c1e4dfd161f303084d1a5"
+            },
+            {
+              "name": "pageNo",
+              "value": "1"
+            },
+            {
+              "name": "numOfRows",
+              "value": "1"
+            },
+            {
+              "name": "resultType",
+              "value": "json"
+            },
+            {
+              "name": "bzmnNm",
+              "value": "={{ $json.businessname }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2560,
+        224
+      ],
+      "id": "c1c2aadb-38df-4fb7-a6c1-2fa415e2beba",
+      "name": "Get public data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// inputItems는 n8n Code 노드에서 자동으로 전달되는 모든 아이템 배열\nconst results = [];\n\nconst inputItems = $input.all();\n\nfor (const current of inputItems) {\n  // 현재 아이템에서 문자열 가져오기 (필드명에 맞게 수정)\n  const str = current.json.businessname || \"\";  \n\n\n  // 공백 제거\n  const noSpace = str.replace(/\\s+/g, \"\");\n\n  // 새로운 아이템으로 push\n  results.push({\n    json: {\n      businessname: noSpace\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2336,
+        224
+      ],
+      "id": "db23341f-37e9-4c92-a2b0-07fea19ea8fa",
+      "name": "Remove whitespace"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2800,
+        128
+      ],
+      "id": "7c8f928f-e79b-4a6e-ad36-e3b2afbf102a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -592,
+        128
+      ],
+      "id": "63e992b5-39f9-4994-b660-350b9e17d94f",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo",
+          "mode": "list",
+          "cachedResultName": "인플루언서",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1712811090,
+          "mode": "list",
+          "cachedResultName": "패션플러스",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1PZVDtznMxK0nO13tBBkoHTHEvGuNmsHpn8KAIKf8DYo/edit#gid=1712811090"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "브랜드명": "={{ $json.Name }}",
+            "상호명": "={{ $json.businessname }}",
+            "연락처": "={{ $json.phone }}",
+            "이메일": "={{ $json.items?.[0]?.rprsvEmladr || \"\" }}",
+            "담장자": "={{ $json.items?.[0]?.rprsvNm || \"\" }}"
+          },
+          "matchingColumns": [
+            "브랜드명"
+          ],
+          "schema": [
+            {
+              "id": "브랜드명",
+              "displayName": "브랜드명",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "상호명",
+              "displayName": "상호명",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "연락처",
+              "displayName": "연락처",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "이메일",
+              "displayName": "이메일",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "담장자",
+              "displayName": "담장자",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "메모",
+              "displayName": "메모",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "콜드콜 날짜",
+              "displayName": "콜드콜 날짜",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "미팅",
+              "displayName": "미팅",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "입점 확정",
+              "displayName": "입점 확정",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3008,
+        240
+      ],
+      "id": "d3ca4afe-ccdd-4a3e-8762-c7aba35811b2",
+      "name": "Append or update row",
+      "credentials": {
+        "googleApi": {
+          "id": "ZkmqvP27tbnM6X5e",
+          "name": "Google Sheets Soonicorn API_3"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        128
+      ],
+      "id": "18464161-e3b9-4504-ace3-050cf4f9582f",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "connections": {
+    "Make Brand-Shop URL": {
+      "main": [
+        [
+          {
+            "node": "Get brandpage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make category url": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get brand info": {
+      "main": [
+        [
+          {
+            "node": "Set brand info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set brand info": {
+      "main": [
+        [
+          {
+            "node": "Check item count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check item count": {
+      "main": [
+        [
+          {
+            "node": "Get Fashionplus row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Fashionplus row": {
+      "main": [
+        [
+          {
+            "node": "Set Fashionplus row data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fashionplus row data": {
+      "main": [
+        [
+          {
+            "node": "Check not empty brand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check not empty brand": {
+      "main": [
+        [
+          {
+            "node": "Make unique brand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make unique brand": {
+      "main": [
+        [
+          {
+            "node": "Make Brand-Shop URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get brandpage": {
+      "main": [
+        [
+          {
+            "node": "Make product url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get product page": {
+      "main": [
+        [
+          {
+            "node": "Get businessname & phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get businessname & phone": {
+      "main": [
+        [
+          {
+            "node": "Remove whitespace",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Make product url": {
+      "main": [
+        [
+          {
+            "node": "Get product page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get public data": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Remove whitespace": {
+      "main": [
+        [
+          {
+            "node": "Get public data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Append or update row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get brand info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Make category url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": [],
+  "versionId": "155dc2fa-187a-4a75-ac91-cb9c992491e3"
+}
