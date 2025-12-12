@@ -1,0 +1,679 @@
+{
+  "name": "AI_CreateImage_loop_InfoImage",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 입력 필드 이름만 변경해서 사용하세요.\nconst ThumbNailImage = $input.first().json.data.thumbNailImageBase64;\nconst SubImage = $input.first().json.data.subImageSumImage;   // ← 여기에 필드명 지정\n\nlet ThumbNailImageBase64 = null;\nlet SubImageBase64 = null;\n// 문자열인지 체크\nif (typeof ThumbNailImage === \"string\" && ThumbNailImage.includes(\",\")) {\n  ThumbNailImageBase64 = ThumbNailImage.split(\",\")[1];\n}\n\nif (typeof SubImage === \"string\" && SubImage.includes(\",\")) {\n  SubImageBase64 = SubImage.split(\",\")[1];\n}\n\nreturn [\n  {\n    json: {\n      ThumbNailImageBase64: ThumbNailImageBase64,\n      SubImageBase64: SubImageBase64\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -16
+      ],
+      "id": "902da4ed-a0a8-4753-9a06-e90d3ac257ff",
+      "name": "Make Pure Base64"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.10:7777/api/products/images",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"productId\": \"{{ $json.ProductID }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -160,
+        -16
+      ],
+      "id": "4aa0c16b-1a8c-4042-a9ef-85f4166705c3",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        -16
+      ],
+      "id": "b5e837e2-dd47-4320-8ca6-b19eadd22bf7",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "\nimport base64\nfrom PIL import Image\nfrom io import BytesIO\n\n# 인풋 이미지 base64\nraw_b64 = _('Make Pure Base64').first().json.SubImageBase64\npure_b64 = raw_b64.split(\",\")[-1]\n\nimg_data = base64.b64decode(pure_b64)\nimg = Image.open(BytesIO(img_data))\n\norig_w, orig_h = img.size\n\ntarget_h = 8000\ntarget_w = int(orig_w * (target_h / orig_h))\n\nreturn {\n    \"original_width\": orig_w,\n    \"original_height\": orig_h,\n    \"resize_width\": target_w,\n    \"resize_height\": target_h,\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        304
+      ],
+      "id": "16e8681f-e18b-460b-be6e-adf16f8c4074",
+      "name": "Code in Python (Beta)"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        304
+      ],
+      "id": "e7241758-a00b-4906-9d18-48fc445c2141",
+      "name": "Convert Base64 To File"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "dataPropertyName": "Image",
+        "width": "={{ $('Code in Python (Beta)').all()[0].json.resize_width }}",
+        "height": "={{ $('Code in Python (Beta)').all()[0].json.resize_height }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        960,
+        304
+      ],
+      "id": "d9511cb7-27f3-4ec5-ad29-8008705295e4",
+      "name": "Edit Image"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "text": "={{ $('Code in JavaScript8').all()[0].json.cleanedPrompt }}",
+        "inputType": "binary",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        304
+      ],
+      "id": "1ef05946-fe16-46e3-a392-b0357c654e80",
+      "name": "Analyze image",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "s53gMH1GWKtYEmUN",
+          "name": "Claude API_1"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =======================================================\n// 1) AI output (TEXT 형태) 가져오기\n// =======================================================\nlet text = \"\";\n\n// 형태 1: { content: [ { type: \"text\", text: \"...\" } ] }\nif ($json.content && Array.isArray($json.content) && $json.content[0]?.text) {\n  text = $json.content[0].text;\n}\n\n// 형태 2: { content: [ { parts: [ { text: \"...\" } ] } ] }\nif (!text && $json.content?.[0]?.parts?.[0]?.text) {\n  text = $json.content[0].parts[0].text;\n}\n\n// 형태 3: 일반 text\nif (!text && $json.text) {\n  text = $json.text;\n}\n\nif (!text) {\n  throw new Error(\"AI로부터 받은 텍스트를 찾을 수 없습니다.\");\n}\n\n// =======================================================\n// 2) ```json ... ``` 안의 JSON만 추출\n// =======================================================\nconst jsonMatch = text.match(/```json([\\s\\S]*?)```/);\n\nif (!jsonMatch) {\n  throw new Error(\"텍스트 안에서 JSON 블록을 찾을 수 없습니다.\");\n}\n\nlet jsonString = jsonMatch[1].trim();\n\n// =======================================================\n// 3) JSON 문자열을 실제 객체로 변환\n// =======================================================\nlet item;\ntry {\n  item = JSON.parse(jsonString);\n} catch (e) {\n  throw new Error(\"JSON 파싱 실패: \" + e.message);\n}\n\n// =======================================================\n// 4) 원본 이미지 크기 (Attach Base65 노드)에서 가져오기\n// =======================================================\n\nconst W_org = $('Code in Python (Beta)').first().json.resize_width;\nconst H_org = $('Code in Python (Beta)').first().json.resize_height;\n\nif (!W_org || !H_org) {\n  throw new Error(\"원본 이미지 크기(resize_width, resize_height)를 찾을 수 없습니다.\");\n}\n\n// =======================================================\n// 5) AI가 본 이미지 크기(ai_processed_size)\n// =======================================================\nconst ai = item.ai_processed_size;\n\nif (!ai || !ai.width || !ai.height) {\n  throw new Error(\"ai_processed_size.width/height가 존재하지 않습니다.\");\n}\n\nconst W_ai = ai.width;\nconst H_ai = ai.height;\n\n// =======================================================\n// 6) 스케일링 함수\n// =======================================================\nfunction scale(value, original, ai) {\n  return Math.round(value * (original / ai));\n}\n\n// =======================================================\n// 7) 섹션 좌표를 원본 스케일 기준으로 변환\n// =======================================================\nconst output = [];\n\nfor (const key in item.sections) {\n  const sec = item.sections[key];\n\n  const scaled = {\n    section_name: key,\n    x: scale(sec.x, W_org, W_ai),\n    y: scale(sec.y, H_org, H_ai),\n    width: scale(sec.width, W_org, W_ai),\n    height: scale(sec.height, H_org, H_ai)\n  };\n\n  output.push({ json: scaled });\n}\n\n// =======================================================\n// 8) n8n의 Code node는 배열을 반환해야 함\n// =======================================================\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        304
+      ],
+      "id": "e44ab69b-2386-4fb0-96ad-62aa91df1058",
+      "name": "Code in JavaScript35"
+    },
+    {
+      "parameters": {
+        "operation": "crop",
+        "dataPropertyName": "Image",
+        "width": "={{ $('Code in JavaScript35').all()[0].json.width }}",
+        "height": "={{ $('Code in JavaScript35').all()[0].json.height }}",
+        "positionX": "=0",
+        "positionY": "={{ $('Code in JavaScript35').all()[0].json.y }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        304
+      ],
+      "id": "844ef473-b6d8-435f-8f6f-ea418a01c8b5",
+      "name": "Edit Image28"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1952,
+        304
+      ],
+      "id": "e46a0762-4469-4227-a685-e7cd3b5a5ff6",
+      "name": "Convert Base64 To File16"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "dataPropertyName": "Image",
+        "width": "={{ $('Code in Python (Beta)').all()[0].json.resize_width }}",
+        "height": "={{ $('Code in Python (Beta)').all()[0].json.resize_height }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        304
+      ],
+      "id": "0ce275a4-9166-4965-a76d-3e0d7311e14b",
+      "name": "Resize Image"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      base64: $('Make Pure Base64').first().json.SubImageBase64\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        304
+      ],
+      "id": "1f8a5b9c-8a3d-4017-9e22-bd0559733a64",
+      "name": "Code in JavaScript36"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      base64: $('Make Pure Base64').first().json.SubImageBase64\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        304
+      ],
+      "id": "d6917104-3b4a-43cb-be16-b10bbc445875",
+      "name": "Code in JavaScript37"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "binaryPropertyName": "Image",
+        "destinationKey": "Info_Image",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        3696,
+        304
+      ],
+      "id": "6059e1a4-b9da-405c-9904-1daa1dca1374",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import base64\nfrom PIL import Image\nfrom io import BytesIO\n\n# base64 불러오기\nb64 = _input.first().json.Info_Image\nimg_data = base64.b64decode(b64.split(\",\")[-1])\nimg = Image.open(BytesIO(img_data))\n\n# RGBA → RGB 변환\nif img.mode in (\"RGBA\", \"LA\"):\n    img = img.convert(\"RGB\")\n\n# 리사이즈 (예시)\ntarget_w = 700\norig_w, orig_h = img.size\nratio = target_w / orig_w\ntarget_h = int(orig_h * ratio)\nimg = img.resize((target_w, target_h), Image.LANCZOS)\n\n# JPEG로 저장\nbuffer = BytesIO()\nimg.save(buffer, format=\"JPEG\", quality=90)\nout_b64 = base64.b64encode(buffer.getvalue()).decode()\n\nreturn {\n    \"resized_image\": \"data:image/jpeg;base64,\" + out_b64\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        304
+      ],
+      "id": "17581d00-e5b4-4710-a8b0-baff2d762243",
+      "name": "Code in Python (Beta)2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.1.10:7777/api/products/update-ai-images",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"productNumber\": \n    \"{{ $('When Executed by Another Workflow').all()[0].json.ProductID }}\",\n  \"AISubImageUrls\": [ \n    \"{{ $('Code in Python (Beta)2').all()[0].json.resized_image }}\" \n  ],\n  \"AIDetailImageUrls\": [ \n    \"{{ $('Code in Python (Beta)2').all()[0].json.resized_image }}\" \n  ]\n}\n\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4144,
+        304
+      ],
+      "id": "3d271511-945c-4f2f-b189-4b3f6df2b6d4",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "crop",
+        "dataPropertyName": "Image",
+        "width": "={{ $('Code in JavaScript47').all()[0].json.width }}",
+        "height": "={{ $('Code in JavaScript47').all()[0].json.height }}",
+        "positionX": "=0",
+        "positionY": "={{ 8000 - $('Code in JavaScript47').all()[0].json.height }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        3456,
+        304
+      ],
+      "id": "65954790-9971-40e4-b765-a79488bb55cb",
+      "name": "Edit Image31"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "text": "={{ $('Code in JavaScript9').all()[0].json.cleanedPrompt }}",
+        "inputType": "binary",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        304
+      ],
+      "id": "923ac635-e8c0-46f6-8758-c8c7e5d39dd8",
+      "name": "Analyze image3",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "p6BLBZwDjHyrH8aE",
+          "name": "Claude API_2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =======================================================\n// 1) AI output (TEXT 형태) 가져오기\n// =======================================================\nlet text = \"\";\n\n// 형태 1: { content: [ { type: \"text\", text: \"...\" } ] }\nif ($json.content && Array.isArray($json.content) && $json.content[0]?.text) {\n  text = $json.content[0].text;\n}\n\n// 형태 2: { content: [ { parts: [ { text: \"...\" } ] } ] }\nif (!text && $json.content?.[0]?.parts?.[0]?.text) {\n  text = $json.content[0].parts[0].text;\n}\n\n// 형태 3: 일반 text\nif (!text && $json.text) {\n  text = $json.text;\n}\n\nif (!text) {\n  throw new Error(\"AI로부터 받은 텍스트를 찾을 수 없습니다.\");\n}\n\n// =======================================================\n// 2) ```json ... ``` 안의 JSON만 추출\n// =======================================================\nconst jsonMatch = text.match(/```json([\\s\\S]*?)```/);\n\nif (!jsonMatch) {\n  throw new Error(\"텍스트 안에서 JSON 블록을 찾을 수 없습니다.\");\n}\n\nlet jsonString = jsonMatch[1].trim();\n\n// =======================================================\n// 3) JSON 문자열을 실제 객체로 변환\n// =======================================================\nlet item;\ntry {\n  item = JSON.parse(jsonString);\n} catch (e) {\n  throw new Error(\"JSON 파싱 실패: \" + e.message);\n}\n\n// =======================================================\n// 4) 원본 이미지 크기 (Attach Base65 노드)에서 가져오기\n// =======================================================\n\nconst W_org = $('Code in JavaScript35').all()[0].json.width;\nconst H_org = $('Code in JavaScript35').all()[0].json.height;\n\nif (!W_org || !H_org) {\n  throw new Error(\"원본 이미지 크기(resize_width, resize_height)를 찾을 수 없습니다.\");\n}\n\n// =======================================================\n// 5) AI가 본 이미지 크기(ai_processed_size)\n// =======================================================\nconst ai = item.ai_processed_size;\n\nif (!ai || !ai.width || !ai.height) {\n  throw new Error(\"ai_processed_size.width/height가 존재하지 않습니다.\");\n}\n\nconst W_ai = ai.width;\nconst H_ai = ai.height;\n\n// =======================================================\n// 6) 스케일링 함수\n// =======================================================\nfunction scale(value, original, ai) {\n  return Math.round(value * (original / ai));\n}\n\n// =======================================================\n// 7) 섹션 좌표를 원본 스케일 기준으로 변환\n// =======================================================\nconst output = [];\n\nfor (const key in item.sections) {\n  const sec = item.sections[key];\n\n  const scaled = {\n    section_name: key,\n    x: scale(sec.x, W_org, W_ai),\n    y: scale(sec.y, H_org, H_ai),\n    width: scale(sec.width, W_org, W_ai),\n    height: scale(sec.height, H_org, H_ai)\n  };\n\n  output.push({ json: scaled });\n}\n\n// =======================================================\n// 8) n8n의 Code node는 배열을 반환해야 함\n// =======================================================\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        304
+      ],
+      "id": "11455f09-faf1-4056-a9cf-cc4a085d93c6",
+      "name": "Code in JavaScript47"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "binaryPropertyName": "Image",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3088,
+        304
+      ],
+      "id": "65fa436a-fd34-49ad-89c6-6fb206026b70",
+      "name": "Convert Base64 To File21"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "dataPropertyName": "Image",
+        "width": "={{ $('Code in Python (Beta)').all()[0].json.resize_width }}",
+        "height": "={{ $('Code in Python (Beta)').all()[0].json.resize_height }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        304
+      ],
+      "id": "72fb28ae-9dde-4114-9aa6-6a29ebe30fa0",
+      "name": "Resize Image5"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      base64: $('Make Pure Base64').first().json.SubImageBase64\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        304
+      ],
+      "id": "be899784-89c1-400a-8c78-6ed0b476bab2",
+      "name": "Code in JavaScript48"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prompt = `\n당신은 쇼핑몰 상세페이지(세로형) 이미지를 분석하는 전문 비전 분석 모델입니다.\n아래 규칙에 따라 이미지에서 **오직 정보영역(info_section)**만 정확하게 감지하고,\n그 픽셀 좌표(x, y, width, height)와 전체 이미지 크기를 반환하십시오.\n===========================================================\n:경고: 중요: 이미지 크기 측정 원칙\n반환하는 ai_processed_size는 **실제 이미지의 픽셀 크기**여야 합니다.\n- 이미지 뷰어에서 보이는 크기가 아닌, 원본 파일의 실제 픽셀 해상도 기준\n- 세로로 긴 상세페이지의 경우 width는 보통 작고(100~1000px), height가 매우 큼(1000~10000px)\n===========================================================\n:다트: 핵심 원칙 (최우선 적용)\ninfo_section은 **텍스트 + 표 + 도식화**로 구성된 정보 영역이다.\n**실사 사진 또는 실사 사진의 배경색이 1px이라도 포함되면 안 된다.**\n:흰색_확인_표시: 허용:\n- 순수 텍스트 / 표(table)\n- 도식화 (옷 실루엣 + 치수선 일러스트)\n- 아이콘, 심볼\n- **흰색(#FFFFFF) 또는 완전한 단색 배경**\n:출입금지: 제외 (실사 사진 및 관련 요소):\n- 원단/소재 클로즈업 사진\n- 제품 착용컷 / 모델 사진\n- 제품 단독 사진\n- 디테일 확대 사진\n- **실사 사진의 일부가 잘린 영역 (베이지, 그레이 등 제품/배경 색상이 보이는 부분)**\n===========================================================\n:압정: info_section 시작점 감지 규칙 (필수 적용)\n:다트: **특수 규칙 – \"Size Information\" 텍스트 기준 처리**\nSTEP 1) 이미지 내에서 \"Size Information\" 텍스트를 찾는다\nSTEP 2) 해당 텍스트의 상단 y좌표를 확인한다\nSTEP 3) **배경색 검증 (필수)**\n- \"Size Information\" 텍스트 바로 위 영역의 배경색을 확인\n- 만약 흰색이 아닌 다른 색상(베이지, 그레이, 제품 색상 등)이 보이면:\n → 해당 색상 영역이 완전히 끝나는 지점까지 y좌표를 아래로 이동\n- info_section은 **반드시 흰색 배경에서 시작**해야 함\nSTEP 4) 최종 시작점 결정\n- 시작점(y) = 흰색 배경이 시작되는 지점 (실사 사진/배경색 완전 제외)\n===========================================================\n:압정: info_section 일반 감지 규칙 (\"Size Information\" 텍스트가 없는 경우)\nSTEP 1) **이미지 맨 아래에서 위로 스캔**\n- 하단부터 올라가며 텍스트/표/도식화 영역 확인\nSTEP 2) **실사 사진 또는 비-흰색 배경을 만나면 스캔 중지**\n- 위로 올라가다가 제품사진 또는 컬러 배경을 발견하면 멈춤\n- 해당 영역의 **가장 아래 y좌표(하단 끝)**를 기록\nSTEP 3) **info_section 시작점 계산**\n- 시작점(y) = 실사 영역 하단 y좌표 + 여백\n- 흰색 배경이 확실히 시작되는 지점\nSTEP 4) **info_section 종료점**\n- 종료점 = 이미지 전체 height\n===========================================================\n:압정: 실사 사진 vs 정보 영역 구분 기준\n실사 사진 영역 (:출입금지: 제외):\n- 카메라로 촬영된 실제 질감\n- 원단/제품의 음영·입체감\n- 사실적인 색감, 주름, 그림자\n- **베이지, 그레이, 크림색 등 촬영 배경색**\n- **제품 색상이 일부라도 보이는 영역**\n정보 영역 (:흰색_확인_표시: 허용):\n- 선형 일러스트 (치수 도식화)\n- 치수 안내선, 숫자·단위\n- 단순 외곽선, 평면적 그래픽\n- **흰색 배경 위의 텍스트/표**\n===========================================================\n:압정: 최종 검증 체크리스트\n출력 전 반드시 확인:\n☐ 시작점(y) 위치에 실사 사진이 없는가?\n☐ 시작점(y) 위치의 배경이 흰색인가?\n☐ 시작점(y) ~ y+50px 구간에 베이지/그레이 등 컬러가 없는가?\n☐ ai_processed_size가 실제 이미지 픽셀 크기와 일치하는가?\n하나라도 실패하면 → 시작점(y)을 아래로 조정\n===========================================================\n:압정: 출력 형식 (JSON만 출력)\n{\n \"ai_processed_size\": {\n  \"width\": number,  // 실제 이미지 픽셀 너비\n  \"height\": number  // 실제 이미지 픽셀 높이\n },\n \"sections\": {\n  \"info_section\": {\n   \"x\": number,\n   \"y\": number,   // 흰색 배경 시작점\n   \"width\": number,\n   \"height\": number\n  } | null\n }\n}\n===========================================================\n:경고: 최종 강조\n1. 정보영역에 실사 사진이 절대 포함되면 안 됨\n2. 실사 사진의 배경색(베이지, 그레이 등)도 실사 영역으로 간주\n3. info_section은 반드시 **흰색 배경**에서 시작\n4. 애매하면 시작점을 아래로 (보수적으로 판단)\n`;\n\nreturn [\n  {\n    json: {\n      cleanedPrompt: JSON.stringify(prompt)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        304
+      ],
+      "id": "7742065e-34a1-4e28-af0a-c8a9cab9a7fe",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const prompt = `\n당신은 쇼핑몰 상세페이지(세로형) 이미지에서 **정보영역(info_section)**의 시작점을 찾는 비전 분석 모델입니다.\n\n═══════════════════════════════════════════════════════════\n📌 정보영역 정의\n═══════════════════════════════════════════════════════════\n정보영역 = 텍스트 기반의 제품 상세정보가 시작되는 지점부터 이미지 끝까지\n\n포함 대상:\n- Color View, Fabric View Point Details, Size Information, Product Information 등 정보 헤더\n- 사이즈 표, 제품 스펙 표\n- 도식화(선화 형태의 치수 안내 일러스트)\n- Notice, 배송안내, 교환/반품, 주의사항 등 텍스트 영역\n\n제외 대상 (절대 포함 금지):\n- 실사 제품 사진, 모델 컷, 착용샷\n- 원단/디테일 클로즈업 사진\n- 배경이 있는 제품 촬영 이미지\n\n═══════════════════════════════════════════════════════════\n🎯 시작점(y) 결정 규칙 (우선순위)\n═══════════════════════════════════════════════════════════\n\n[1순위] 정보 헤더 텍스트 검색\n아래 텍스트 중 가장 먼저(위쪽에) 나타나는 것을 찾는다:\n- \"Fabric View\" / \"Fabric\" / \"원단 정보\" /\n- \"Color View\" / \"Color Info\" / \"색상 정보\"\n- \"Point Details\" / \"Point Detail\"\n- \"Size Information\" / \"Size Info\" / \"사이즈 정보\"\n- \"Product Information\" / \"Product Info\" / \"제품 정보\"\n- \"Detail Information\" / \"상세 정보\"\n\n완전 포함 원칙:\n텍스트의 첫 글자가 절대 잘리지 않도록 보수적으로 넉넉하게 잡을 것\n시작점 설정 방식:\n\"텍스트가 시작되는 지점\"이 아니라 **\"텍스트 영역 바로 위 여백까지 포함한 지점\"**을 시작점으로 인식\n→ 해당 텍스트의 상단 경계에서 여백이 살짝 보이는 부분의 y값을 시작점으로 설정\n→ 절대로 옷, 제품사진이 포함되면 안됨.\n\n[2순위] 정보 헤더가 없는 경우\n사이즈 표(테이블) 또는 스펙 표의 상단을 찾는다\n→ 표 상단에서 위로 30px 여백을 포함한 y값을 시작점으로 설정\n\n[3순위] 위 요소가 모두 없는 경우\n마지막 실사 사진이 끝나는 지점을 찾는다\n→ 사진 하단 + 30px을 시작점으로 설정\n\n═══════════════════════════════════════════════════════════\n⚠️ 검증 체크리스트 (필수 확인)\n═══════════════════════════════════════════════════════════\n□ 시작점(y) 아래쪽 20px 내에 실사 사진이 없는가?\n\n→ 실사 사진이 있을경우 y값을 실사사진 하단 경계로 이동.\n\n═══════════════════════════════════════════════════════════\n📤 출력 형식\n═══════════════════════════════════════════════════════════\n반드시 아래 JSON 형식만 출력하세요. 설명이나 추가 텍스트 금지.\n\n{\n  \"ai_processed_size\": {\n    \"width\": [이미지 전체 너비],\n    \"height\": [이미지 전체 높이]\n  },\n  \"sections\": {\n    \"info_section\": {\n      \"x\": 0,\n      \"y\": [정보영역 시작 y좌표],\n      \"width\": [이미지 전체 너비],\n      \"height\": [이미지 높이 - 시작 y좌표]\n    }\n  }\n}\n\n═══════════════════════════════════════════════════════════\n📝 계산 공식\n═══════════════════════════════════════════════════════════\n- info_section.x = 0 (항상 좌측 끝에서 시작)\n- info_section.width = ai_processed_size.width (전체 너비)\n- info_section.height = ai_processed_size.height - info_section.y\n`;\n\nreturn [\n  {\n    json: {\n      cleanedPrompt: JSON.stringify(prompt)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        304
+      ],
+      "id": "45ee5380-0142-4452-af96-c4a5885f029e",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "content": "## SubImage",
+        "height": 240,
+        "width": 4240
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        240
+      ],
+      "id": "b39e7484-ec04-43ab-b1f3-64067c84157d",
+      "name": "Sticky Note8"
+    }
+  ],
+  "connections": {
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Make Pure Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Base64 To File": {
+      "main": [
+        [
+          {
+            "node": "Edit Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Image": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript35",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript35": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript37",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Image28": {
+      "main": [
+        [
+          {
+            "node": "Analyze image3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Base64 To File16": {
+      "main": [
+        [
+          {
+            "node": "Resize Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resize Image": {
+      "main": [
+        [
+          {
+            "node": "Edit Image28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript36": {
+      "main": [
+        [
+          {
+            "node": "Convert Base64 To File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript37": {
+      "main": [
+        [
+          {
+            "node": "Convert Base64 To File16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Image31": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript47",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript47": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript48",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Base64 To File21": {
+      "main": [
+        [
+          {
+            "node": "Resize Image5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resize Image5": {
+      "main": [
+        [
+          {
+            "node": "Edit Image31",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript48": {
+      "main": [
+        [
+          {
+            "node": "Convert Base64 To File21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript36",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Pure Base64": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "pinData": {},
+  "tags": [],
+  "versionId": "682b939a-a2c9-44a8-9499-97d828973c8e"
+}
