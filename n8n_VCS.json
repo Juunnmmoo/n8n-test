@@ -1,0 +1,300 @@
+{
+  "name": "n8n_VCS",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        -240
+      ],
+      "id": "1c2a7946-c530-48f1-98af-edc067fcbb11",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5678/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiOWQ3NjVkNy05ZGI4LTQ2NDItYmY4Ni1mZmU1ODk0ZTJiODgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY1NDMzMzAyLCJleHAiOjE3NjgwMjEyMDB9.uovWWY_ekOIDe6dg9ZuUgTZ9DUWgoJtzr5wS4UX62mw"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -480,
+        -240
+      ],
+      "id": "d543e01f-c5c1-4edd-8dff-fb555455e3d4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflows = $input.first().json.data || [];\n\nreturn workflows.map(wf => ({\n  json: wf\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        -240
+      ],
+      "id": "cac3f729-a6bf-4e18-82a7-d8d97bbcbcbe",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6f587f41-b1d5-4afa-b961-12cd2ca8aca9",
+              "leftValue": "={{ $json.isArchived }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        -240
+      ],
+      "id": "533f7cab-c9ba-4808-8c90-152959c9f56e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const wf = item.json;  // workflow JSON 그대로\n\n  // Git 저장용으로 정리 (Import 가능한 형태)\n  const cleaned = {\n    name: wf.name,\n    nodes: wf.nodes,\n    connections: wf.connections,\n    settings: wf.settings || {},\n    meta: wf.meta || {},\n    pinData: wf.pinData || {},\n    tags: wf.tags || [],\n    versionId: wf.versionId || 1,\n  };\n\n  // 파일명 생성\n  const fileName = (wf.name || wf.id || \"workflow\")\n    .replace(/[^a-zA-Z0-9_\\-]/g, \"_\")\n    + \".json\";\n\n  return {\n    json: {\n      fileName,\n      content: JSON.stringify(cleaned, null, 2)\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -256
+      ],
+      "id": "a71ebba9-6ceb-4315-bb4b-42de7b45bada",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "Juunnmmoo",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-test",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://github.com/Juunnmmoo/n8n-test"
+        },
+        "filePath": "={{ $json.fileName }}",
+        "additionalParameters": {}
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        -256
+      ],
+      "id": "b7205c9a-e427-451f-b511-9d50189b0853",
+      "name": "Get a file",
+      "webhookId": "c9855332-b183-424c-9a04-6ddb885ec136",
+      "alwaysOutputData": false,
+      "credentials": {
+        "githubApi": {
+          "id": "34CCbDMd61CXR6tT",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "owner": {
+          "__rl": true,
+          "value": "Juunnmmoo",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-test",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://github.com/Juunnmmoo/n8n-test"
+        },
+        "filePath": "={{ $json.fileName }}",
+        "fileContent": "={{ $json.content }}",
+        "commitMessage": "=add : {{ $json.fileName }} "
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        -160
+      ],
+      "id": "63cbd552-bf95-4fd1-9a34-4ef34cdd42d0",
+      "name": "Create a file",
+      "webhookId": "5a3f1c9b-7952-4f45-a57c-9e95c12225d8",
+      "credentials": {
+        "githubApi": {
+          "id": "34CCbDMd61CXR6tT",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "edit",
+        "owner": {
+          "__rl": true,
+          "value": "Juunnmmoo",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-test",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://github.com/Juunnmmoo/n8n-test"
+        },
+        "filePath": "={{ $json.fileName }}",
+        "fileContent": "={{ $json.content }}",
+        "commitMessage": "=feat : {{ $json.fileName }} "
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        -336
+      ],
+      "id": "5c0404ca-a2b1-4382-84e5-162936e1f48a",
+      "name": "Edit a file",
+      "webhookId": "6f3b26ba-8501-4717-b598-0cc59084079b",
+      "credentials": {
+        "githubApi": {
+          "id": "34CCbDMd61CXR6tT",
+          "name": "GitHub account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Edit a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit a file": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Seoul",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": [],
+  "versionId": "99d5013c-1214-4d61-821c-8aa8739022b9"
+}
