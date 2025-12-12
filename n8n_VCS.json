@@ -154,7 +154,7 @@
       "type": "n8n-nodes-base.github",
       "typeVersion": 1.1,
       "position": [
-        656,
+        640,
         -160
       ],
       "id": "63cbd552-bf95-4fd1-9a34-4ef34cdd42d0",
@@ -202,7 +202,8 @@
           "id": "34CCbDMd61CXR6tT",
           "name": "GitHub account"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "connections": {
@@ -296,5 +297,5 @@
   },
   "pinData": {},
   "tags": [],
-  "versionId": "99d5013c-1214-4d61-821c-8aa8739022b9"
+  "versionId": "9490102f-57a5-4105-9978-93749c63cfef"
 }
