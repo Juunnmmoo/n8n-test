@@ -1,0 +1,479 @@
+{
+  "name": "Create ai image_loop",
+  "nodes": [
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        32,
+        -480
+      ],
+      "id": "5d292516-84d3-41d0-bd96-efb072415e2a",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "LsJ0uFBgus91eQzi",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LsJ0uFBgus91eQzi",
+          "cachedResultName": "Create ai image_core"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        -384
+      ],
+      "id": "519ffbfd-5946-49cd-bc55-0ea96d9f6862",
+      "name": "Call 'AI_CreateImage_Sub'1"
+    },
+    {
+      "parameters": {
+        "content": "## 특정 브랜드의 모든 제품 리스트",
+        "height": 448,
+        "width": 1536
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -560
+      ],
+      "id": "b4e813f8-a9bd-4c9d-98d3-a4f22b534ca1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "url": "=http://{{ $json['IP주소'] }}/api/products/by-brand",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={ \"brand\": \"{{ $json['Brand Name'] }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -448,
+        -480
+      ],
+      "id": "d82f0da2-3b72-4023-be40-52787c5c68a2",
+      "name": "Get ProductID API"
+    },
+    {
+      "parameters": {
+        "amount": 300
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        -384
+      ],
+      "id": "b6e73555-026a-4348-8a0c-0c5227daf1bf",
+      "name": "Wait",
+      "webhookId": "a8316fa4-d876-4f8a-8ffd-96c565819bb0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\n// data 배열만 추출\nconst dataList = item.data || [];\n\nreturn dataList.map(id => ({\n  json: {\n    ProductID: id\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        -480
+      ],
+      "id": "313038aa-a716-465d-a777-606b34adc1ce",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.Action = $('Input Brand-name').all()[0].json.Action\n\n    item.json.IP = $('Input Brand-name').first().json['IP주소']\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -384
+      ],
+      "id": "577da3f0-e943-40e7-880f-a85b2e17e559",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "formTitle": "Brand Name",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Brand Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Action",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Update All"
+                  },
+                  {
+                    "option": "Update Background-removed"
+                  },
+                  {
+                    "option": "Update Original-Image"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "IP주소",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -688,
+        -480
+      ],
+      "id": "3080826b-c6cb-4f08-bb7f-9d4933819f5c",
+      "name": "Input Brand-name",
+      "webhookId": "0aea1226-2a53-4b4b-9f27-b4d6b24e565e"
+    },
+    {
+      "parameters": {
+        "content": "## 수동 입력된 제품 리스트\n",
+        "height": 512,
+        "width": 1616
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -80
+      ],
+      "id": "f45bfb28-ad3e-4603-ba8e-18cfd4c172d6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "41e4144f-cdda-4735-9d32-f92fb499e22e",
+      "name": "Loop Over Items5"
+    },
+    {
+      "parameters": {
+        "formTitle": "Input Product-number",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Product-numvber",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Action",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Update All"
+                  },
+                  {
+                    "option": "Update Background-removed"
+                  },
+                  {
+                    "option": "Update Original-Image"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "IP주소",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -672,
+        0
+      ],
+      "id": "b20a9c4e-f022-47d6-84bd-fb9b7d22ba8b",
+      "name": "Input Product-number1",
+      "webhookId": "098e3878-8967-43ef-b71b-47a65ed37023"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) 첫 번째 input item 가져오기\nconst item = $input.first().json;\n\n// 2) Product-number 문자열 가져오기\nconst raw = item[\"Product-numvber\"] || \"\";\n\n// 3) 공백 기준으로 분리 + 빈 값 제거\nconst list = raw\n  .split(\" \")\n  .map(v => v.trim())\n  .filter(v => v !== \"\");\n\n// 4) 각 product-number 를 개별 아이템으로 변환하여 반환\nreturn list.map(pn => ({\n  json: {\n    ProductID: pn\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        0
+      ],
+      "id": "ded0d7ec-aef0-4e58-b8d8-dc79b08f2c4a",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "amount": 300
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        112
+      ],
+      "id": "7f7d0806-e3bf-4e91-8013-e1609508df22",
+      "name": "Wait3",
+      "webhookId": "a8316fa4-d876-4f8a-8ffd-96c565819bb0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.Action = $('Input Product-number1').all()[0].json.Action\n\n  item.json.IP = $('Input Product-number1').first().json['IP주소']\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        112
+      ],
+      "id": "08d792e9-b31c-44a1-bb73-fe31ccb4d1d1",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "LsJ0uFBgus91eQzi",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LsJ0uFBgus91eQzi",
+          "cachedResultName": "Create ai image_core"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        112
+      ],
+      "id": "66dab596-0e6e-4b7a-a994-66edc05aaa05",
+      "name": "Call 'Create ai image_core'"
+    },
+    {
+      "parameters": {
+        "jsCode": "const Action = $('Input Product-number1').first().json.Action;\n\nlet timeout;\n\nif (Action === 'Update All') {\n  timeout = 600;\n} else {\n  timeout = 600;\n}\n\nreturn [{ json: { timeout } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -256
+      ],
+      "id": "1ac65bdc-8e10-4e8f-8cd1-1199a9506232",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'AI_CreateImage_Sub'1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ProductID API": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Call 'AI_CreateImage_Sub'1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Brand-name": {
+      "main": [
+        [
+          {
+            "node": "Get ProductID API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items5": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Product-number1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "Call 'Create ai image_core'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Create ai image_core'": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "pinData": {},
+  "tags": [],
+  "versionId": "b3cc6440-2222-4312-ab47-bb0ee2eff113"
+}
